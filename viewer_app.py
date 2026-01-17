@@ -54,8 +54,9 @@ if df is not None:
         selected_desa_label = st.selectbox("2. Pilih Desa", ["-- Pilih --"] + list_desa)
         
         if selected_desa_label != "-- Pilih --":
-            # Tampilkan Hasil SLS berdasarkan desa yang dipilih
-            results = filtered_kec[filtered_kec['label_desa'] == selected_desa_label]
+            # Tampilkan Hasil SLS berdasarkan desa yang dipilih 
+            # DITAMBAHKAN: .sort_values('idsls') agar urut berdasarkan IDSLS
+            results = filtered_kec[filtered_kec['label_desa'] == selected_desa_label].sort_values('idsls')
             
             st.divider()
             st.subheader(f"Daftar SLS ({len(results)})")

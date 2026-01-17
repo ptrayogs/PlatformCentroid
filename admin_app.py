@@ -9,7 +9,7 @@ st.set_page_config(page_title="Admin - GeoAI SLS Generator", layout="wide")
 st.title("🛠️ Admin Dashboard: SLS Center Generator")
 st.markdown("""
 Aplikasi ini akan menghitung titik tengah SLS berdasarkan **konsentrasi titik bangunan** (Mean Center). 
-Jika dalam satu SLS tidak terdapat titik bangunan, maka titik akan diletakkan pada *Representative Point* (titik di dalam poligon).
+Jika dalam satu SLS tidak terdapat titik bangunan, maka titik akan diletakkan pada *Representative Point*.
 """)
 
 # 1. Upload Section
@@ -23,11 +23,11 @@ if sls_file and bldg_file:
     if st.button("🚀 Jalankan Proses Generate"):
         try:
             with st.spinner("Sedang memproses data spasial..."):
-                # Load Data menggunakan pyogrio agar lebih cepat
+                # Load Data
                 gdf_sls = gpd.read_file(sls_file, engine='pyogrio')
                 gdf_bldg = gpd.read_file(bldg_file, engine='pyogrio')
 
-                # Memastikan CRS menggunakan WGS84 (EPSG:4326) agar hasil Lat/Long benar
+                # Memastikan CRS menggunakan WGS84 (EPSG:4326)
                 if gdf_sls.crs != "EPSG:4326":
                     gdf_sls = gdf_sls.to_crs(epsg=4326)
                 if gdf_bldg.crs != "EPSG:4326":
@@ -41,30 +41,34 @@ if sls_file and bldg_file:
                     st.error("Tidak ada titik bangunan yang ditemukan di dalam poligon SLS.")
                 else:
                     # 3. Hitung Mean Center
-                    joined['x'] = joined.geometry.x
-                    joined['y'] = joined.geometry.y
+                    joined['x_coord'] = joined.geometry.x
+                    joined['y_coord'] = joined.geometry.y
 
-                    # Gunakan 'idsls_right' (ID asli dari poligon) jika terjadi bentrokan nama
+                    # Deteksi kolom ID pasca join
                     group_col = 'idsls_right' if 'idsls_right' in joined.columns else 'idsls'
                     
-                    mean_centers = joined.groupby(group_col).agg({'x': 'mean', 'y': 'mean'}).reset_index()
+                    mean_centers = joined.groupby(group_col).agg({'x_coord': 'mean', 'y_coord': 'mean'}).reset_index()
                     mean_centers = mean_centers.rename(columns={group_col: 'idsls'})
                     
                     # Membuat geometry point dari hasil rata-rata
-                    mean_centers['geometry_center'] = mean_centers.apply(lambda row: Point(row['x'], row['y']), axis=1)
+                    mean_centers['geometry_center'] = mean_centers.apply(lambda row: Point(row['x_coord'], row['y_coord']), axis=1)
 
                     # 4. Gabungkan kembali ke data SLS Master
                     final_gdf = gdf_sls.merge(mean_centers[['idsls', 'geometry_center']], on='idsls', how='left')
 
-                    # Fallback Mechanism: Jika SLS kosong, gunakan representative_point (pasti di dalam poligon)
-                    final_gdf['final_geometry'] = final_gdf['geometry_center'].fillna(final_gdf.geometry.representative_point())
+                    # Fallback Mechanism
+                    # Kita buat GeoSeries secara eksplisit agar bisa mengambil .y dan .x
+                    rep_points = final_gdf.geometry.representative_point()
+                    final_points = final_gdf['geometry_center'].fillna(rep_points)
+                    
+                    # Mengubah hasil fillna menjadi GeoSeries agar atribut .x dan .y tersedia
+                    final_points_gs = gpd.GeoSeries(final_points)
 
-                    # Ekstrak Latitude dan Longitude
-                    final_gdf['latitude'] = final_gdf['final_geometry'].y
-                    final_gdf['longitude'] = final_gdf['final_geometry'].x
+                    # 5. Ekstrak Latitude dan Longitude
+                    final_gdf['latitude'] = final_points_gs.y
+                    final_gdf['longitude'] = final_points_gs.x
 
-                    # 5. Export Data
-                    # Memilih kolom sesuai struktur data yang tersedia
+                    # 6. Export Data
                     output_cols = ['nmkec', 'nmdesa', 'nmsls', 'idsls', 'latitude', 'longitude']
                     available_cols = [c for c in output_cols if c in final_gdf.columns]
                     export_df = pd.DataFrame(final_gdf[available_cols])

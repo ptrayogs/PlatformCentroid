@@ -12,8 +12,6 @@ Aplikasi ini akan menghitung titik tengah SLS berdasarkan **konsentrasi titik ba
 Jika dalam satu SLS tidak terdapat titik bangunan, maka titik akan diletakkan pada *Representative Point* (titik di dalam poligon).
 """)
 
----
-
 # 1. Upload Section
 col1, col2 = st.columns(2)
 with col1:
@@ -36,20 +34,17 @@ if sls_file and bldg_file:
                     gdf_bldg = gdf_bldg.to_crs(epsg=4326)
 
                 # 2. Spatial Join
-                # Menggabungkan titik bangunan ke dalam poligon SLS
-                # idsls dari bldg menjadi 'idsls_left', idsls dari sls menjadi 'idsls_right'
+                # idsls bangunan -> 'idsls_left', idsls poligon -> 'idsls_right'
                 joined = gpd.sjoin(gdf_bldg, gdf_sls, predicate='within')
 
                 if joined.empty:
-                    st.error("Tidak ada titik bangunan yang ditemukan di dalam poligon SLS. Pastikan kedua file berada di wilayah yang sama.")
+                    st.error("Tidak ada titik bangunan yang ditemukan di dalam poligon SLS.")
                 else:
                     # 3. Hitung Mean Center
-                    # Rumus Mean Center:
-                    # \bar{X} = \frac{\sum x_i}{n}, \bar{Y} = \frac{\sum y_i}{n}
                     joined['x'] = joined.geometry.x
                     joined['y'] = joined.geometry.y
 
-                    # Kita gunakan 'idsls_right' karena ini adalah ID asli dari poligon SLS
+                    # Gunakan 'idsls_right' (ID asli dari poligon) jika terjadi bentrokan nama
                     group_col = 'idsls_right' if 'idsls_right' in joined.columns else 'idsls'
                     
                     mean_centers = joined.groupby(group_col).agg({'x': 'mean', 'y': 'mean'}).reset_index()
@@ -61,8 +56,7 @@ if sls_file and bldg_file:
                     # 4. Gabungkan kembali ke data SLS Master
                     final_gdf = gdf_sls.merge(mean_centers[['idsls', 'geometry_center']], on='idsls', how='left')
 
-                    # Fallback Mechanism: Jika SLS kosong bangunan, gunakan representative_point
-                    # representative_point dijamin selalu berada di dalam poligon
+                    # Fallback Mechanism: Jika SLS kosong, gunakan representative_point (pasti di dalam poligon)
                     final_gdf['final_geometry'] = final_gdf['geometry_center'].fillna(final_gdf.geometry.representative_point())
 
                     # Ekstrak Latitude dan Longitude
@@ -70,10 +64,8 @@ if sls_file and bldg_file:
                     final_gdf['longitude'] = final_gdf['final_geometry'].x
 
                     # 5. Export Data
-                    # Memilih kolom yang dibutuhkan untuk Viewer
+                    # Memilih kolom sesuai struktur data yang tersedia
                     output_cols = ['nmkec', 'nmdesa', 'nmsls', 'idsls', 'latitude', 'longitude']
-                    
-                    # Memastikan semua kolom target tersedia di data original
                     available_cols = [c for c in output_cols if c in final_gdf.columns]
                     export_df = pd.DataFrame(final_gdf[available_cols])
 
@@ -91,6 +83,5 @@ if sls_file and bldg_file:
 
         except Exception as e:
             st.error(f"Terjadi kesalahan teknis: {e}")
-
 else:
     st.info("Silakan upload kedua file GeoJSON untuk memulai.")

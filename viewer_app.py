@@ -1,47 +1,54 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Cek Titik SLS", layout="centered")
+st.set_page_config(page_title="Pencarian Titik SLS", layout="centered")
 
-# CSS untuk membuat tampilan lebih ramah Mobile
+# Styling agar tombol dan teks lebih besar di layar HP
 st.markdown("""
     <style>
-    .stSelectbox { margin-bottom: -10px; }
-    .css-1r6slb0 { padding: 10px; border-radius: 10px; background-color: #f0f2f6; }
+    .stSelectbox { margin-bottom: 20px; }
+    .stCode { background-color: #f0f2f6; border-radius: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("📍 Geotagging SLS")
+st.write("Cari SLS dan salin koordinatnya untuk aplikasi lain.")
 
 @st.cache_data
-def get_data():
+def load_data():
     try:
         return pd.read_csv("master_sls.csv")
     except:
         return None
 
-df = get_data()
+df = load_data()
 
 if df is not None:
-    # Filter Berjenjang
-    kec = st.selectbox("Pilih Kecamatan", ["-- Pilih --"] + sorted(df['nm_kec'].unique().tolist()))
+    # Filter Kecamatan
+    list_kec = sorted(df['nmkec'].unique().tolist())
+    selected_kec = st.selectbox("1. Pilih Kecamatan", ["-- Pilih --"] + list_kec)
     
-    if kec != "-- Pilih --":
-        desa_list = sorted(df[df['nm_kec'] == kec]['nm_desa'].unique().tolist())
-        desa = st.selectbox("Pilih Desa", ["-- Pilih --"] + desa_list)
+    if selected_kec != "-- Pilih --":
+        # Filter Desa
+        list_desa = sorted(df[df['nmkec'] == selected_kec]['nmdesa'].unique().tolist())
+        selected_desa = st.selectbox("2. Pilih Desa", ["-- Pilih --"] + list_desa)
         
-        if desa != "-- Pilih --":
-            filtered = df[(df['nm_kec'] == kec) & (df['nm_desa'] == desa)]
-            st.write(f"Menampilkan **{len(filtered)}** SLS")
-            
-            for _, row in filtered.iterrows():
-                with st.expander(f"🏠 {row['nm_sls']}"):
+        if selected_desa != "-- Pilih --":
+            # Tampilkan Hasil SLS
+            results = df[(df['nmkec'] == selected_kec) & (df['nmdesa'] == selected_desa)]
+            st.divider()
+            st.subheader(f"Daftar SLS ({len(results)})")
+
+            for _, row in results.iterrows():
+                with st.expander(f"🏠 {row['nmsls']}"):
                     coords = f"{row['latitude']},{row['longitude']}"
                     
-                    st.write("Salin Koordinat:")
+                    st.write("Klik koordinat di bawah untuk copy:")
+                    # st.code akan membuat box yang kalau di-tap di HP biasanya langsung select all
                     st.code(coords, language=None)
                     
+                    # Tombol buka peta
                     maps_link = f"https://www.google.com/maps?q={coords}"
-                    st.link_button("Buka di Google Maps", maps_link)
+                    st.link_button("🗺️ Lihat di Google Maps", maps_link)
 else:
-    st.error("File master_sls.csv belum tersedia. Silakan hubungi Admin.")
+    st.warning("⚠️ File 'master_sls.csv' tidak ditemukan. Admin perlu meng-upload data terlebih dahulu.")

@@ -61,16 +61,20 @@ if df is not None:
             st.subheader(f"Daftar SLS ({len(results)})")
 
             for _, row in results.iterrows():
-                # Menampilkan Nama SLS dalam expander (Card style untuk mobile)
+                # Menampilkan Nama SLS sebagai judul kartu
                 with st.expander(f"🏠 {row['nmsls']}"):
-                    coords = f"{row['latitude']},{row['longitude']}"
                     
-                    st.write("Salin Koordinat:")
-                    # Kotak kode untuk memudahkan copy-paste di HP
+                    # 1. Menampilkan IDSLS
+                    st.write(f"**IDSLS :** `{row['idsls']}`")
+                    
+                    # 2. Menampilkan Titik Tengah Koordinat
+                    coords = f"{row['latitude']},{row['longitude']}"
+                    st.write("**Titik Tengah Koordinat :**")
+                    # Menggunakan st.code agar user di HP tinggal tap untuk copy
                     st.code(coords, language=None)
                     
-                    # Link integrasi ke aplikasi Google Maps
-                    maps_link = f"http://maps.google.com/maps?q={coords}"
-                    st.link_button("🗺️ Lihat di Google Maps", maps_link)
+                    # 3. Link ke Google Maps
+                    maps_link = f"https://www.google.com/maps?q={coords}"
+                    st.link_button("🗺️ Buka di Google Maps", maps_link)
 else:
     st.warning("⚠️ File 'master_sls.csv' belum tersedia. Pastikan Admin sudah menjalankan proses generate.")

@@ -69,7 +69,8 @@ if sls_file and bldg_file:
                     final_gdf['longitude'] = final_points_gs.x
 
                     # 6. Export Data
-                    output_cols = ['nmkec', 'nmdesa', 'nmsls', 'idsls', 'latitude', 'longitude']
+                    # Di dalam admin_app.py bagian export
+                    output_cols = ['kdkec', 'nmkec', 'kddesa', 'nmdesa', 'nmsls', 'idsls', 'latitude', 'longitude']
                     available_cols = [c for c in output_cols if c in final_gdf.columns]
                     export_df = pd.DataFrame(final_gdf[available_cols])
 

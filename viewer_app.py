@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Pencarian Titik SLS", layout="centered")
+st.set_page_config(page_title="Centroid SLS", layout="centered")
 
 # Styling agar tombol dan teks lebih besar di layar HP
 st.markdown("""
@@ -11,8 +11,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📍 Geotagging SLS")
-st.write("Cari SLS dan salin koordinatnya untuk aplikasi lain.")
+st.title("📍 Centroid Tagging SLS")
+st.write("Temukan Centroid SLS di Kabupaten Pesawaran")
 
 @st.cache_data
 def load_data():
